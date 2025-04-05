@@ -34,6 +34,7 @@ class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
+        self.birthday - None
 
     def add_phone(self, phone: str):
             self.phones.append(Phone(phone))
@@ -47,6 +48,14 @@ class Record:
                     phone.value = new_phone
                     return
             raise ValueError("Телефон не знайдений")
+    
+    def add_birthday(self, birhday: str):
+         self.add_birthday = Birthday(birhday)
+
+    def show_birthday(self):
+         if self.birthday:
+              return str(self.birthday)
+         return "День народження не вказано."
         
     def find_phone(self, phone:str):
             for p in self.phones:
