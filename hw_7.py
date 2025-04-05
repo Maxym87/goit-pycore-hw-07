@@ -34,7 +34,7 @@ class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
-        self.birthday - None
+        self.birthday = None
 
     def add_phone(self, phone: str):
             self.phones.append(Phone(phone))
@@ -48,24 +48,23 @@ class Record:
                     phone.value = new_phone
                     return
             raise ValueError("Телефон не знайдений")
-    
-    def add_birthday(self, birhday: str):
-         self.add_birthday = Birthday(birhday)
 
-    def show_birthday(self):
-         if self.birthday:
-              return str(self.birthday)
-         return "День народження не вказано."
-        
+    
     def find_phone(self, phone:str):
             for p in self.phones:
                 if p.value == phone:
                     return p.value
             
             return None
+    
+    def add_birthday(self, birhday: str):
+        self.add_birthday = Birthday(birhday)
         
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
+       phones = '; '.join(p.value for p in self.phones)
+       bday = f", birthday: {self.birthday.value.strftime('%d.%m.%Y')}" if self.birthday else ""
+       return f"Contact name: {self.name.value}, phones: {phones}{bday}"
+
 
 class AddressBook(UserDict):
     def add_record(self, record: Record):
@@ -78,40 +77,121 @@ class AddressBook(UserDict):
         if name in self.data:
             del self.data[name]
 
+    def get_upcoming_birthdays(self):
+        today = datetime.today().date()
+        upcoming = []
+        for record in self.data.values():
+            if record.birthday:
+                bday = record.birthday.value.replace(year=today.year)
+                if today <= bday <= today + timedelta(days=7):
+                    upcoming.append(f"{record.name.value}: {bday.strftime('%d.%m.%Y')}")
+        return upcoming
+    
+    def input_error(func):
+        def inner(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except ValueError:
+                return "Будь ласка, введіть правильні значення."
+            except IndexError:
+                return "Не вистачає аргументів для команди."
+            except KeyError:
+                return "Контакт не знайдено."
+            except Exception as e:
+                return f"Сталася помилка: {e}"
+        return inner
 
-if __name__ == '__main__':
+
+
+@input_error
+def add_contact(args, book: AddressBook):
+    if len(args) < 2:
+        raise ValueError("Команда 'add' потребує ІМ’Я та ТЕЛЕФОН.")
+    name, phone, *_ = args
+
+
+@input_error
+def change_contact(args, book: AddressBook):
+    if len(args) < 3:
+        raise ValueError("Команда 'change' потребує ІМ’Я, СТАРИЙ ТЕЛЕФОН та НОВИЙ ТЕЛЕФОН.")
+    name, old_phone, new_phone = args
+
+@input_error
+def show_phones(args, book: AddressBook):
+    if not args:
+        raise ValueError("Команда 'phone' потребує ІМ’Я контакта.")
+    name = args[0]
+
+@input_error
+def show_all(book: AddressBook):
+    if not book.data:
+        return "No contacts."
+    return "\n".join(str(record) for record in book.data.values())
+
+
+@input_error
+def add_birthday(args, book: AddressBook):
+    if len(args) < 2:
+        raise ValueError("Команда 'add-birthday' потребує ІМ’Я та ДАТУ НАРОДЖЕННЯ.")
+    name, birthday = args
+
+@input_error
+def show_birthday(args, book: AddressBook):
+    if not args:
+        raise ValueError("Команда 'show-birthday' потребує ІМ’Я.")
+    name = args[0]
+
+
+@input_error
+def birthdays(args, book: AddressBook):
+    return "\n".join(book.get_upcoming_birthdays()) or "No upcoming birthdays."
+
+
+def parse_input(user_input):
+    parts = user_input.strip().split()
+    command = parts[0].lower()
+    return command, parts[1:]
+
+
+def main():
     book = AddressBook()
+    print("Вас вітає бот-асистент!")
 
-    john_record = Record("John")
-    john_record.add_phone("1234567890")
-    john_record.add_phone("5555555555")
+    while True:
+        user_input_str = input("Введіть команду: ")
+        command, args = parse_input(user_input_str)
 
-    
-    book.add_record(john_record)
+        if command in ["close", "exit"]:
+            print("До побачення!")
+            break
 
-    
-    jane_record = Record("Jane")
-    jane_record.add_phone("9876543210")
-    book.add_record(jane_record)
+        elif command == "hello":
+            print("Чим я можу допомогти?")
 
-    
-    for name, record in book.data.items():
-        print(record)
+        elif command == "add":
+            print(add_contact(args, book))
 
-    
-    john = book.find("John")
-    john.edit_phone("1234567890", "1112223333")
+        elif command == "change":
+            print(change_contact(args, book))
 
-    print(john)
+        elif command == "phone":
+            print(show_phones(args, book))
 
-    
-    found_phone = john.find_phone("5555555555")
-    print(f"{john.name.value}: {found_phone}")
+        elif command == "all":
+            print(show_all(book))
 
-    
-    book.delete("Jane")
+        elif command == "add-birthday":
+            print(add_birthday(args, book))
 
-    
-    print("Після видалення Jane:")
-    for name, record in book.data.items():
-        print(record)
+        elif command == "show-birthday":
+            print(show_birthday(args, book))
+
+        elif command == "birthdays":
+            print(birthdays(args, book))
+
+        else:
+            print("Невідома команда.")
+
+
+if __name__ == "__main__":
+    main()
