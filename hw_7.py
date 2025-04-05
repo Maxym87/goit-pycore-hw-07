@@ -98,7 +98,7 @@ class AddressBook(UserDict):
         upcoming = []
         for record in self.data.values():
             if record.birthday:
-                bday = record.birthday.value.replace(year=today.year)
+                bday = record.birthday.value.replace(year=today.year).date()
                 if today <= bday <= today + timedelta(days=7):
                     upcoming.append(f"{record.name.value}: {bday.strftime('%d.%m.%Y')}")
         return upcoming
