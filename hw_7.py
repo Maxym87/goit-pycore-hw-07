@@ -19,6 +19,16 @@ class Phone(Field):
 
     def is_valid_phone(self, phone: str) -> bool:
         return len(phone) == 10 and phone.isdigit()
+    
+class Birthday(Field):
+     def __init__(self, value):
+          try:
+               self.value = datetime.strptime(value, "%d.%m.%Y")
+          except ValueError:
+               raise ValueError('Невірний фомат дати. Має бути ДД.ММ.РРРР')
+          
+     def __str__(self):
+          return self.value.strftime("%d.%m.%Y")
 
 class Record:
     def __init__(self, name):
