@@ -2,6 +2,22 @@ from collections import UserDict
 from datetime import datetime, timedelta
 
 
+
+def input_error(func):
+        def inner(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except ValueError:
+                return "Будь ласка, введіть правильні значення."
+            except IndexError:
+                return "Не вистачає аргументів для команди."
+            except KeyError:
+                return "Контакт не знайдено."
+            except Exception as e:
+                return f"Сталася помилка: {e}"
+        return inner
+
+
 class Field:
     def __init__(self, value):
         self.value = value
@@ -57,8 +73,8 @@ class Record:
             
             return None
     
-    def add_birthday(self, birhday: str):
-        self.add_birthday = Birthday(birhday)
+    def add_birthday(self, birthday: str):
+        self.birthday = Birthday(birthday)
         
     def __str__(self):
        phones = '; '.join(p.value for p in self.phones)
@@ -87,20 +103,6 @@ class AddressBook(UserDict):
                     upcoming.append(f"{record.name.value}: {bday.strftime('%d.%m.%Y')}")
         return upcoming
     
-    def input_error(func):
-        def inner(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except ValueError:
-                return "Будь ласка, введіть правильні значення."
-            except IndexError:
-                return "Не вистачає аргументів для команди."
-            except KeyError:
-                return "Контакт не знайдено."
-            except Exception as e:
-                return f"Сталася помилка: {e}"
-        return inner
-
 
 
 @input_error
@@ -108,6 +110,14 @@ def add_contact(args, book: AddressBook):
     if len(args) < 2:
         raise ValueError("Команда 'add' потребує ІМ’Я та ТЕЛЕФОН.")
     name, phone, *_ = args
+    record = book.find(name)
+    message = "Контакт оновлено."
+    if record is None:
+        record = Record(name)
+        book.add_record(record)
+        message = "Контакт додано."
+    record.add_phone(phone)
+    return message
 
 
 @input_error
@@ -115,36 +125,58 @@ def change_contact(args, book: AddressBook):
     if len(args) < 3:
         raise ValueError("Команда 'change' потребує ІМ’Я, СТАРИЙ ТЕЛЕФОН та НОВИЙ ТЕЛЕФОН.")
     name, old_phone, new_phone = args
+    record = book.find(name)
+    if record:
+        record.edit_phone(old_phone, new_phone)
+        return "Телефон оновлено."
+    return "Контакт не знайдено."
+
 
 @input_error
 def show_phones(args, book: AddressBook):
     if not args:
-        raise ValueError("Команда 'phone' потребує ІМ’Я контакта.")
+        raise ValueError("Команда 'phone' потребує ІМ’Я.")
     name = args[0]
+    record = book.find(name)
+    if record:
+        return f"{name}: {'; '.join([p.value for p in record.phones])}"
+    return "Контакт не знайдено."
+
 
 @input_error
 def show_all(book: AddressBook):
     if not book.data:
-        return "No contacts."
+        return "Немає контактів."
     return "\n".join(str(record) for record in book.data.values())
 
 
 @input_error
 def add_birthday(args, book: AddressBook):
     if len(args) < 2:
-        raise ValueError("Команда 'add-birthday' потребує ІМ’Я та ДАТУ НАРОДЖЕННЯ.")
+        raise ValueError("Команда 'add-birthday' потребує ІМ’Я та ДАТУ.")
     name, birthday = args
+    record = book.find(name)
+    if record:
+        record.add_birthday(birthday)
+        return "День народження додано."
+    return "Контакт не знайдено."
+
 
 @input_error
 def show_birthday(args, book: AddressBook):
     if not args:
         raise ValueError("Команда 'show-birthday' потребує ІМ’Я.")
     name = args[0]
+    record = book.find(name)
+    if record:
+        return str(record.birthday) if record.birthday else "День народження не вказано."
+    return "Контакт не знайдено."
 
 
 @input_error
 def birthdays(args, book: AddressBook):
-    return "\n".join(book.get_upcoming_birthdays()) or "No upcoming birthdays."
+    upcoming = book.get_upcoming_birthdays()
+    return "\n".join(upcoming) if upcoming else "Немає днів народжень найближчим часом."
 
 
 def parse_input(user_input):
